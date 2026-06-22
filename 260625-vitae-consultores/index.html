@@ -967,11 +967,12 @@
 
     function showLoadError(file) {
       if (loadError) return;
+      const displayFile = file || "imagen sin ruta declarada";
       loadError = document.createElement("div");
       loadError.className = "load-error";
       loadError.innerHTML = `
         <strong>No se pudo cargar una imagen.</strong>
-        Comprueba que <code>${file}</code> existe dentro de <code>slides/</code> junto al HTML de la presentación.
+        Comprueba que <code>${displayFile}</code> existe junto al HTML de la presentación.
       `;
       stage.appendChild(loadError);
       showUi(true);
@@ -1039,7 +1040,7 @@
         image.alt = `Diapositiva ${paddedSlideNumber(index)}: ${slide.title}`;
         image.decoding = "async";
         if (index === 0) image.loading = "eager";
-        image.addEventListener("error", () => showLoadError(slide.file));
+        image.addEventListener("error", () => showLoadError(slide.file || slide.image || slide.src));
         stage.appendChild(image);
         return image;
       });
