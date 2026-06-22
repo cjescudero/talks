@@ -1,0 +1,1295 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Utilidad de la IA Generativa en el Desarrollo de Software: ¿realidad o ficción?</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2311100e'/%3E%3Cpath d='M15 42h34M19 19h26v18H19z' fill='none' stroke='%23e6c36a' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #11100e;
+      --panel: rgba(255, 250, 238, 0.08);
+      --ink: #fff7e7;
+      --muted: rgba(255, 247, 231, 0.68);
+      --line: rgba(255, 247, 231, 0.22);
+      --accent: #e6c36a;
+      --shadow: rgba(0, 0, 0, 0.52);
+      --slide-aspect-ratio: 16 / 9;
+      --slide-aspect-number: 1.77777778;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    .built-deck .loader {
+      display: none;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at 22% 18%, rgba(230, 195, 106, 0.16), transparent 31%),
+        radial-gradient(circle at 78% 72%, rgba(134, 187, 181, 0.12), transparent 34%),
+        var(--bg);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    body {
+      min-height: 100svh;
+    }
+
+    .deck {
+      position: relative;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr);
+      width: 100vw;
+      height: 100svh;
+      padding: clamp(14px, 2vw, 28px);
+      cursor: none;
+    }
+
+    .deck.show-ui,
+    .deck:has(.hud:hover),
+    .deck:has(.index-panel:hover) {
+      cursor: default;
+    }
+
+    .stage {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 0;
+      perspective: 1600px;
+    }
+
+    .loader {
+      display: grid;
+      place-items: center;
+      gap: 18px;
+      max-width: min(620px, calc(100vw - 48px));
+      padding: 28px;
+      border: 1px solid rgba(230, 195, 106, 0.42);
+      border-radius: 18px;
+      background: rgba(17, 16, 14, 0.78);
+      box-shadow: 0 24px 80px var(--shadow);
+      text-align: center;
+      z-index: 40;
+    }
+
+    .loader h1 {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 42px);
+      letter-spacing: 0;
+    }
+
+    .loader p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .loader-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .loader button {
+      width: auto;
+      min-width: 172px;
+      padding: 0 18px;
+      font: inherit;
+      font-weight: 650;
+    }
+
+    .loader input {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .load-error {
+      position: absolute;
+      max-width: min(640px, calc(100vw - 48px));
+      padding: 18px 20px;
+      border: 1px solid rgba(230, 195, 106, 0.45);
+      border-radius: 14px;
+      background: rgba(17, 16, 14, 0.82);
+      color: var(--ink);
+      line-height: 1.45;
+      text-align: center;
+      z-index: 30;
+    }
+
+    .load-error strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .load-error code {
+      color: var(--accent);
+    }
+
+    .slide {
+      position: absolute;
+      width: min(100%, calc((100svh - (2 * clamp(14px, 2vw, 28px))) * var(--slide-aspect-number)));
+      aspect-ratio: var(--slide-aspect-ratio);
+      border-radius: 10px;
+      object-fit: contain;
+      background: #f8efd9;
+      box-shadow: 0 34px 90px var(--shadow), 0 0 0 1px rgba(255, 255, 255, 0.14);
+      opacity: 0;
+      transform: translate3d(48px, 0, -80px) rotateY(-5deg) scale(0.965);
+      transition:
+        opacity 560ms cubic-bezier(.2, .72, .22, 1),
+        transform 720ms cubic-bezier(.2, .72, .22, 1),
+        filter 560ms ease;
+      filter: blur(5px) saturate(0.82);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .slide.is-current {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) rotateY(0) scale(1);
+      filter: blur(0) saturate(1);
+      pointer-events: auto;
+      z-index: 3;
+    }
+
+    .slide.is-prev {
+      opacity: 0;
+      transform: translate3d(-64px, 0, -110px) rotateY(5deg) scale(0.955);
+      z-index: 1;
+    }
+
+    .slide.is-next {
+      opacity: 0;
+      transform: translate3d(64px, 0, -110px) rotateY(-5deg) scale(0.955);
+      z-index: 1;
+    }
+
+    .hud {
+      position: fixed;
+      left: 50%;
+      bottom: clamp(14px, 2vw, 28px);
+      display: grid;
+      grid-template-columns: auto minmax(130px, 1fr) minmax(96px, 180px) auto;
+      align-items: center;
+      gap: 16px;
+      max-width: 1120px;
+      width: min(calc(100vw - 28px), 1120px);
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 247, 231, 0.18);
+      border-radius: 999px;
+      background: rgba(17, 16, 14, 0.42);
+      backdrop-filter: blur(14px) saturate(1.1);
+      box-shadow: 0 14px 48px rgba(0, 0, 0, 0.20);
+      opacity: 0;
+      transform: translate(-50%, 18px);
+      pointer-events: none;
+      transition: opacity 220ms ease, transform 220ms ease;
+      z-index: 10;
+    }
+
+    .deck.show-ui .hud,
+    .hud:hover,
+    .index-panel:hover {
+      opacity: 1;
+      transform: translate(-50%, 0);
+      pointer-events: auto;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button {
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--ink);
+      cursor: pointer;
+      transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: rgba(230, 195, 106, 0.7);
+      background: rgba(230, 195, 106, 0.14);
+    }
+
+    button:active {
+      transform: translateY(0) scale(0.98);
+    }
+
+    button svg {
+      width: 22px;
+      height: 22px;
+      stroke-width: 2;
+    }
+
+    button:disabled {
+      cursor: default;
+      opacity: 0.36;
+    }
+
+    .meta {
+      min-width: 0;
+      text-align: center;
+    }
+
+    .title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: clamp(14px, 1.35vw, 17px);
+      font-weight: 650;
+      letter-spacing: 0;
+    }
+
+    .counter {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress {
+      position: relative;
+      height: 5px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 247, 231, 0.14);
+    }
+
+    .progress span {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), #8abcb7);
+      transition: width 520ms cubic-bezier(.2, .72, .22, 1);
+    }
+
+    .index-panel {
+      position: fixed;
+      right: clamp(12px, 2vw, 28px);
+      bottom: 92px;
+      width: min(360px, calc(100vw - 24px));
+      max-height: min(430px, calc(100svh - 130px));
+      overflow: auto;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(17, 16, 14, 0.86);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 24px 80px var(--shadow);
+      opacity: 0;
+      transform: translateY(12px) scale(0.98);
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 180ms ease;
+      z-index: 20;
+    }
+
+    .index-panel.is-open {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .index-panel button {
+      display: grid;
+      grid-template-columns: 46px 1fr;
+      place-items: initial;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      height: auto;
+      min-height: 48px;
+      padding: 9px 11px;
+      border-radius: 12px;
+      text-align: left;
+      font: inherit;
+    }
+
+    .index-panel button + button {
+      margin-top: 6px;
+    }
+
+    .index-panel button.is-active {
+      border-color: rgba(230, 195, 106, 0.75);
+      background: rgba(230, 195, 106, 0.16);
+    }
+
+    .index-number {
+      color: var(--accent);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .index-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .hint {
+      position: fixed;
+      top: 16px;
+      right: 18px;
+      color: rgba(255, 247, 231, 0.55);
+      font-size: 12px;
+    }
+
+    .time-overlay {
+      position: fixed;
+      top: 16px;
+      right: 18px;
+      display: grid;
+      gap: 4px;
+      min-width: 168px;
+      padding: 12px 14px;
+      border: 1px solid rgba(230, 195, 106, 0.42);
+      border-radius: 14px;
+      background: rgba(17, 16, 14, 0.86);
+      color: var(--ink);
+      box-shadow: 0 18px 60px var(--shadow);
+      backdrop-filter: blur(18px);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      z-index: 24;
+    }
+
+    .time-elapsed {
+      font-size: clamp(24px, 3vw, 40px);
+      font-weight: 720;
+      line-height: 1;
+    }
+
+    .time-clock {
+      color: var(--muted);
+      font-size: clamp(17px, 1.9vw, 23px);
+      font-weight: 650;
+    }
+
+    .branding {
+      position: fixed;
+      left: clamp(14px, 2vw, 28px);
+      right: clamp(14px, 2vw, 28px);
+      bottom: clamp(14px, 2vw, 24px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      color: rgba(255, 247, 231, 0.66);
+      font-size: 12px;
+      pointer-events: none;
+      opacity: 0.84;
+      z-index: 6;
+    }
+
+    .branding-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .branding-logos {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .branding-logos img {
+      max-height: 28px;
+      max-width: 110px;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.32));
+    }
+
+    @media (max-width: 700px) {
+      .deck {
+        padding: 10px;
+      }
+
+      .slide {
+        width: min(100%, calc((100svh - 20px) * var(--slide-aspect-number)));
+        border-radius: 7px;
+      }
+
+      .hud {
+        grid-template-columns: auto 1fr auto;
+        gap: 8px;
+        border-radius: 24px;
+      }
+
+      .controls {
+        gap: 6px;
+      }
+
+      button {
+        width: 40px;
+        height: 40px;
+      }
+
+      .progress {
+        display: none;
+      }
+
+      .hint {
+        display: none;
+      }
+
+      .time-overlay {
+        top: 10px;
+        right: 10px;
+        min-width: 140px;
+      }
+
+      .branding {
+        bottom: 76px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slide,
+      .progress span,
+      button {
+        transition: none;
+      }
+    }
+
+    @media print {
+      @page {
+        size: A4 landscape;
+        margin: 0;
+      }
+
+      html,
+      body {
+        width: auto;
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+        background: #fff;
+      }
+
+      .deck {
+        display: block;
+        width: auto;
+        height: auto;
+        min-height: 0;
+        padding: 0;
+        cursor: default;
+        background: #fff;
+      }
+
+      .stage {
+        display: block;
+        perspective: none;
+        line-height: 0;
+      }
+
+      .slide {
+        position: relative;
+        display: block;
+        width: min(297mm, calc(210mm * var(--slide-aspect-number)));
+        height: min(210mm, calc(297mm / var(--slide-aspect-number)));
+        margin: calc((210mm - min(210mm, calc(297mm / var(--slide-aspect-number)))) / 2) auto;
+        page-break-after: always;
+        break-after: page;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        border-radius: 0;
+        box-shadow: none;
+        object-fit: contain;
+        opacity: 1 !important;
+        transform: none !important;
+        filter: none !important;
+      }
+
+      .slide:last-of-type {
+        page-break-after: auto;
+        break-after: auto;
+      }
+
+      .loader,
+      .hud,
+      .index-panel,
+      .hint,
+      .time-overlay,
+      .branding {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="built-deck">
+  <main class="deck" aria-label="Visor de diapositivas">
+    <section class="stage" id="stage" aria-live="polite">
+      
+    </section>
+
+    <nav class="hud" aria-label="Controles de la presentacion">
+      <div class="controls">
+        <button id="prev" type="button" aria-label="Diapositiva anterior" title="Anterior">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <path d="m15 18-6-6 6-6"></path>
+          </svg>
+        </button>
+        <button id="next" type="button" aria-label="Diapositiva siguiente" title="Siguiente">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <path d="m9 18 6-6-6-6"></path>
+          </svg>
+        </button>
+        <button id="indexToggle" type="button" aria-label="Abrir indice" title="Indice">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <path d="M8 6h13"></path>
+            <path d="M8 12h13"></path>
+            <path d="M8 18h13"></path>
+            <path d="M3 6h.01"></path>
+            <path d="M3 12h.01"></path>
+            <path d="M3 18h.01"></path>
+          </svg>
+        </button>
+        <button id="printButton" type="button" aria-label="Imprimir o exportar PDF" title="Imprimir/PDF">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <path d="M6 9V2h12v7"></path>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <path d="M6 14h12v8H6z"></path>
+          </svg>
+        </button>
+        <button id="timeToggle" type="button" aria-label="Mostrar hora y tiempo transcurrido" title="Tiempo (T)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M12 7v5l3 2"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="meta">
+        <div class="title" id="title"></div>
+        <div class="counter" id="counter"></div>
+      </div>
+
+      <div class="progress" aria-hidden="true">
+        <span id="progress"></span>
+      </div>
+
+      <button id="fullscreen" type="button" aria-label="Pantalla completa" title="Pantalla completa">
+        <svg class="enter-fullscreen" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
+          <path d="M16 3h3a2 2 0 0 1 2 2v3"></path>
+          <path d="M8 21H5a2 2 0 0 1-2-2v-3"></path>
+          <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
+        </svg>
+      </button>
+    </nav>
+
+    <aside class="index-panel" id="indexPanel" aria-label="Indice de diapositivas"></aside>
+    <div class="branding" id="branding" hidden>
+      <div class="branding-text" id="brandingText"></div>
+      <div class="branding-logos" id="brandingLogos"></div>
+    </div>
+
+    <div class="time-overlay" id="timeOverlay" aria-live="polite" hidden>
+      <div class="time-elapsed" id="timeElapsed">00:00</div>
+      <div class="time-clock" id="timeClock">--:--</div>
+    </div>
+  </main>
+
+  <script>
+    const deck = document.querySelector(".deck");
+    const stage = document.querySelector("#stage");
+    const loader = document.querySelector("#loader");
+    const chooseFolder = document.querySelector("#chooseFolder");
+    const chooseFiles = document.querySelector("#chooseFiles");
+    const folderInput = document.querySelector("#folderInput");
+    const fileInput = document.querySelector("#fileInput");
+    const title = document.querySelector("#title");
+    const counter = document.querySelector("#counter");
+    const progress = document.querySelector("#progress");
+    const prev = document.querySelector("#prev");
+    const next = document.querySelector("#next");
+    const indexToggle = document.querySelector("#indexToggle");
+    const printButton = document.querySelector("#printButton");
+    const timeToggle = document.querySelector("#timeToggle");
+    const indexPanel = document.querySelector("#indexPanel");
+    const fullscreen = document.querySelector("#fullscreen");
+    const branding = document.querySelector("#branding");
+    const brandingText = document.querySelector("#brandingText");
+    const brandingLogos = document.querySelector("#brandingLogos");
+    const hint = document.querySelector(".hint");
+    const timeOverlay = document.querySelector("#timeOverlay");
+    const timeClock = document.querySelector("#timeClock");
+    const timeElapsed = document.querySelector("#timeElapsed");
+    const builtSlides = (() => {
+      try { return [
+  {
+    "id": "cover",
+    "title": "Portada",
+    "image": "slides/001.png",
+    "source_image": "talks/260625-vitae-consultores/assets/cover.png",
+    "image_id": null,
+    "derived_from": null,
+    "notes": "Portada generada automaticamente en el primer build. No regenerar salvo peticion explicita del usuario.",
+    "transition": ""
+  },
+  {
+    "id": "001",
+    "title": "El codigo es para los viejos. Los agentes son el futuro.",
+    "image": "slides/002.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/codigo-agentes.png",
+    "image_id": "img-260625-ia-cluster-tic-001",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 1 en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "002",
+    "title": "Del terminal tonto al agente inteligente",
+    "image": "slides/003.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/terminal-agente.png",
+    "image_id": "img-260625-ia-cluster-tic-002",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 2 en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "002b",
+    "title": "Un chatbot responde. Un agente termina el trabajo.",
+    "image": "slides/004.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/agente-termina-trabajo.png",
+    "image_id": "img-260625-ia-cluster-tic-002b",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 2B en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "003",
+    "title": "Del paradigma Von Neumann al paradigma agente",
+    "image": "slides/005.png",
+    "source_image": "talks/260507-crue-ia-albacete-vibecoding-cowork/assets/7_VonNeumann_LLM.png",
+    "image_id": "img-260507-crue-ia-albacete-vibecoding-cowork-007",
+    "derived_from": null,
+    "notes": "Reutilizada de 260507-crue-ia-albacete-vibecoding-cowork.",
+    "transition": ""
+  },
+  {
+    "id": "004",
+    "title": "Del programador al ingeniero del harness",
+    "image": "slides/006.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/ingeniero-harness.png",
+    "image_id": "img-260625-ia-cluster-tic-004",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 4 en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "004b",
+    "title": "Un experimento de desarrollo agencial puro",
+    "image": "slides/007.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/experimento-desarrollo-agencial.png",
+    "image_id": "img-260625-ia-cluster-tic-004b",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 4B en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "004c",
+    "title": "El loop: la unidad real de productividad",
+    "image": "slides/008.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/loop-unidad-productividad.png",
+    "image_id": "img-260625-ia-cluster-tic-004c",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 4C en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "005",
+    "title": "¿Y si las aplicaciones tienen los días contados?",
+    "image": "slides/009.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/aplicaciones-resultados.png",
+    "image_id": "img-260625-ia-cluster-tic-005",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 5 en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "005a",
+    "title": "Interfaz efímera y UI generativa",
+    "image": "slides/010.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/interfaz-efimera-ui-generativa.png",
+    "image_id": null,
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 5A en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "005b",
+    "title": "Software para problemas de cinco minutos",
+    "image": "slides/011.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/software-cinco-minutos-caos.png",
+    "image_id": "img-260625-ia-cluster-tic-005b",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 5B en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "006",
+    "title": "¿Nos volveremos más tontos?",
+    "image": "slides/012.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/socrates-e-ia.png",
+    "image_id": "img-260625-ia-cluster-tic-006",
+    "derived_from": null,
+    "notes": "Usa la imagen importada renombrada como socrates-e-ia.png.",
+    "transition": ""
+  },
+  {
+    "id": "007",
+    "title": "AlphaGo: cuando la máquina gana y el humano mejora",
+    "image": "slides/013.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/alphago-aprendizaje.png",
+    "image_id": "img-260625-ia-cluster-tic-007",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 7 en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "008",
+    "title": "¿Es el vibe coding una amenaza?",
+    "image": "slides/014.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/vibe-coding-demo-produccion.png",
+    "image_id": "img-260625-ia-cluster-tic-008",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 8 en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "008b",
+    "title": "Del agente al equipo: orquestador y especialistas",
+    "image": "slides/015.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/equipo-agentes-orquestador.png",
+    "image_id": "img-260625-ia-cluster-tic-008b",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 8B en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "009",
+    "title": "¿Dónde estará el valor dentro de cinco años?",
+    "image": "slides/016.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/valor-problema-criterio.png",
+    "image_id": "img-260625-ia-cluster-tic-009",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 9 en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "009b",
+    "title": "La gráfica no dice fin: dice transición",
+    "image": "slides/017.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/demanda-empleo-desde-2020.png",
+    "image_id": "img-260625-vitae-consultores-009b",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 9B en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "009c",
+    "title": "Jevons estructural: menos fricción, más orquestación",
+    "image": "slides/018.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/software-cinco-minutos-caos.png",
+    "image_id": "img-260625-ia-cluster-tic-005b",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 9C en talk.md. Imagen reutilizada como puente visual.",
+    "transition": ""
+  },
+  {
+    "id": "010",
+    "title": "El coste ya no se mide en tokens",
+    "image": "slides/019.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/coste-tarea-modelos-hibridos.png",
+    "image_id": "img-260625-ia-cluster-tic-010",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 10 en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "011",
+    "title": "El burnout de la productividad infinita",
+    "image": "slides/020.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/productividad-infinita-decidir.png",
+    "image_id": "img-260625-ia-cluster-tic-011",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 11 en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "011b",
+    "title": "La paradoja de la productividad",
+    "image": "slides/021.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/productividad-paradoja-estudios.png",
+    "image_id": "img-260625-ia-cluster-tic-011b",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 11B en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "011c",
+    "title": "Qué loops merece la pena correr",
+    "image": "slides/022.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/loops-merece-pena-correr.png",
+    "image_id": "img-260625-ia-cluster-tic-011c",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 11C en talk.md.",
+    "transition": ""
+  },
+  {
+    "id": "012",
+    "title": "Seis respuestas para llevarse",
+    "image": "slides/023.png",
+    "source_image": "talks/260625-vitae-consultores/local-assets/respuestas-convocatoria.png",
+    "image_id": "img-260625-ia-cluster-tic-012",
+    "derived_from": null,
+    "notes": "Ver DIAPOSITIVA 12 en talk.md.",
+    "transition": ""
+  }
+]; } catch { return []; }
+    })();
+    const builtBranding = (() => {
+      try { return {}; } catch { return {}; }
+    })();
+    let slides = [];
+    let images = [];
+    let indexButtons = [];
+    let current = 0;
+    let hideUiTimer;
+    let loadError;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+    let startedAt = null;
+    let timeTimer;
+
+    function hasCoverSlide() {
+      return slides.length > 0 && String(slides[0].id || "").toLowerCase() === "cover";
+    }
+
+    function contentSlideTotal() {
+      return Math.max(0, slides.length - (hasCoverSlide() ? 1 : 0));
+    }
+
+    function displaySlideNumber(index) {
+      if (hasCoverSlide()) return index === 0 ? 0 : index;
+      return index + 1;
+    }
+
+    function paddedSlideNumber(index) {
+      return String(displaySlideNumber(index)).padStart(2, "0");
+    }
+
+    function displayTotal() {
+      const total = hasCoverSlide() ? contentSlideTotal() : slides.length;
+      return String(total).padStart(2, "0");
+    }
+
+    function progressRatio() {
+      const total = hasCoverSlide() ? contentSlideTotal() : slides.length;
+      if (!total) return 0;
+      return Math.max(0, Math.min(1, displaySlideNumber(current) / total));
+    }
+
+    function markFirstAction() {
+      if (!startedAt) {
+        startedAt = Date.now();
+        updateTimeOverlay();
+      }
+    }
+
+    function formatDuration(milliseconds) {
+      const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return [minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
+    }
+
+    function updateTimeOverlay() {
+      const now = new Date();
+      timeClock.textContent = now.toLocaleTimeString("es-ES", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+      timeElapsed.textContent = formatDuration(startedAt ? Date.now() - startedAt : 0);
+    }
+
+    function setTimeOverlayVisible(visible) {
+      timeOverlay.hidden = !visible;
+      timeToggle.setAttribute("aria-pressed", String(visible));
+      timeToggle.setAttribute(
+        "aria-label",
+        visible ? "Ocultar hora y tiempo transcurrido" : "Mostrar hora y tiempo transcurrido"
+      );
+      if (hint) hint.hidden = visible;
+      window.clearInterval(timeTimer);
+      if (visible) {
+        updateTimeOverlay();
+        timeTimer = window.setInterval(updateTimeOverlay, 1000);
+      }
+    }
+
+    function toggleTimeOverlay(event) {
+      if (event) event.stopPropagation();
+      markFirstAction();
+      setTimeOverlayVisible(timeOverlay.hidden);
+      showUi(true);
+    }
+
+    function showLoadError(file) {
+      if (loadError) return;
+      loadError = document.createElement("div");
+      loadError.className = "load-error";
+      loadError.innerHTML = `
+        <strong>No se pudo cargar una imagen.</strong>
+        Comprueba que <code>${file}</code> existe dentro de <code>slides/</code> junto al HTML de la presentación.
+      `;
+      stage.appendChild(loadError);
+      showUi(true);
+    }
+
+    function titleFromFile(name) {
+      return name
+        .replace(/\.[^.]+$/, "")
+        .replace(/[-_]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function isImageFile(file) {
+      return file.type.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(file.name);
+    }
+
+    function loadFiles(fileList) {
+      const files = Array.from(fileList)
+        .filter(isImageFile)
+        .sort((a, b) => a.name.localeCompare(b.name, "es", { numeric: true, sensitivity: "base" }));
+
+      if (!files.length) {
+        showLoadError("ningun fichero de imagen");
+        return;
+      }
+
+      images.forEach((image) => URL.revokeObjectURL(image.src));
+      stage.querySelectorAll(".slide").forEach((image) => image.remove());
+      indexPanel.replaceChildren();
+      if (loadError) {
+        loadError.remove();
+        loadError = null;
+      }
+
+      const fileSlides = files.map((file) => ({
+        src: URL.createObjectURL(file),
+        file: file.name,
+        title: titleFromFile(file.name)
+      }));
+
+      mountSlides(fileSlides);
+    }
+
+    function mountSlides(nextSlides) {
+      images.forEach((image) => {
+        if (image.src && image.src.startsWith("blob:")) URL.revokeObjectURL(image.src);
+      });
+      stage.querySelectorAll(".slide").forEach((image) => image.remove());
+      indexPanel.replaceChildren();
+      if (loadError) {
+        loadError.remove();
+        loadError = null;
+      }
+
+      slides = nextSlides.map((slide) => ({
+        ...slide,
+        src: slide.src || slide.image
+      }));
+
+      images = slides.map((slide, index) => {
+        const image = document.createElement("img");
+        image.className = "slide";
+        image.src = slide.src;
+        image.alt = `Diapositiva ${paddedSlideNumber(index)}: ${slide.title}`;
+        image.decoding = "async";
+        if (index === 0) image.loading = "eager";
+        image.addEventListener("error", () => showLoadError(slide.file));
+        stage.appendChild(image);
+        return image;
+      });
+
+      indexButtons = slides.map((slide, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.innerHTML = `
+          <span class="index-number">${paddedSlideNumber(index)}</span>
+          <span class="index-title">${slide.title}</span>
+        `;
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          markFirstAction();
+          goTo(index);
+          closeIndex();
+        });
+        indexPanel.appendChild(button);
+        return button;
+      });
+
+      if (loader) loader.hidden = true;
+      current = 0;
+      render();
+      showUi();
+    }
+
+    function loadBuiltSlides(nextSlides, brandingConfig = {}) {
+      if (!Array.isArray(nextSlides) || !nextSlides.length) return;
+      document.title = "Utilidad de la IA Generativa en el Desarrollo de Software: ¿realidad o ficción?";
+      mountSlides(nextSlides);
+      applyBranding(brandingConfig);
+    }
+
+    function applyBranding(config = {}) {
+      if (!config || typeof config !== "object") return;
+      brandingText.textContent = "";
+      brandingLogos.replaceChildren();
+      const parts = [];
+      if (config.show_author && config.author_text) parts.push(config.author_text);
+      if (config.show_event && config.event_text) parts.push(config.event_text);
+      if (config.footer_text) parts.push(config.footer_text);
+      brandingText.textContent = parts.join(" · ");
+      const logos = Array.isArray(config.logos) && config.show_logos !== false ? config.logos : [];
+      logos.forEach((logo) => {
+        const image = document.createElement("img");
+        image.src = logo;
+        image.alt = "";
+        image.decoding = "async";
+        brandingLogos.appendChild(image);
+      });
+      branding.hidden = !brandingText.textContent && !logos.length;
+    }
+
+    function render() {
+      if (!slides.length) {
+        title.textContent = "Selecciona imagenes";
+        counter.textContent = "00 / 00";
+        progress.style.width = "0%";
+        prev.disabled = true;
+        next.disabled = true;
+        indexToggle.disabled = true;
+        fullscreen.disabled = false;
+        return;
+      }
+      images.forEach((image, index) => {
+        image.classList.toggle("is-current", index === current);
+        image.classList.toggle("is-prev", index < current);
+        image.classList.toggle("is-next", index > current);
+      });
+      title.textContent = slides[current].title;
+      counter.textContent = `${paddedSlideNumber(current)} / ${displayTotal()}`;
+      progress.style.width = `${progressRatio() * 100}%`;
+      prev.disabled = current === 0;
+      next.disabled = current === slides.length - 1;
+      indexToggle.disabled = false;
+      indexButtons.forEach((button, index) => {
+        button.classList.toggle("is-active", index === current);
+      });
+    }
+
+    function go(delta) {
+      goTo(current + delta);
+    }
+
+    function goTo(index) {
+      if (!slides.length) return;
+      const nextIndex = Math.max(0, Math.min(slides.length - 1, index));
+      if (nextIndex === current) {
+        render();
+        return;
+      }
+      current = nextIndex;
+      render();
+    }
+
+    function showUi(keepOpen = false) {
+      deck.classList.add("show-ui");
+      window.clearTimeout(hideUiTimer);
+      if (!keepOpen && !indexPanel.classList.contains("is-open")) {
+        hideUiTimer = window.setTimeout(() => {
+          deck.classList.remove("show-ui");
+        }, 1600);
+      }
+    }
+
+    function closeIndex() {
+      indexPanel.classList.remove("is-open");
+      indexToggle.setAttribute("aria-expanded", "false");
+      showUi();
+    }
+
+    function toggleIndex(event) {
+      event.stopPropagation();
+      markFirstAction();
+      const isOpen = indexPanel.classList.toggle("is-open");
+      indexToggle.setAttribute("aria-expanded", String(isOpen));
+      showUi(isOpen);
+    }
+
+    async function toggleFullscreen(event) {
+      event.stopPropagation();
+      markFirstAction();
+      closeIndex();
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await deck.requestFullscreen();
+      }
+      showUi();
+    }
+
+    function printDeck(event) {
+      if (event) event.stopPropagation();
+      markFirstAction();
+      closeIndex();
+      showUi(true);
+      window.print();
+    }
+
+    prev.addEventListener("click", (event) => {
+      event.stopPropagation();
+      markFirstAction();
+      go(-1);
+      showUi();
+    });
+    next.addEventListener("click", (event) => {
+      event.stopPropagation();
+      markFirstAction();
+      go(1);
+      showUi();
+    });
+    if (chooseFolder && folderInput) {
+      chooseFolder.addEventListener("click", (event) => {
+        event.stopPropagation();
+        markFirstAction();
+        folderInput.click();
+      });
+      folderInput.addEventListener("change", () => loadFiles(folderInput.files));
+    }
+    if (chooseFiles && fileInput) {
+      chooseFiles.addEventListener("click", (event) => {
+        event.stopPropagation();
+        markFirstAction();
+        fileInput.click();
+      });
+      fileInput.addEventListener("change", () => loadFiles(fileInput.files));
+    }
+    indexToggle.addEventListener("click", toggleIndex);
+    printButton.addEventListener("click", printDeck);
+    timeToggle.addEventListener("click", toggleTimeOverlay);
+    fullscreen.addEventListener("click", toggleFullscreen);
+
+    stage.addEventListener("click", () => {
+      markFirstAction();
+      if (!slides.length) return;
+      go(1);
+    });
+
+    deck.addEventListener("mousemove", () => showUi());
+    deck.addEventListener("touchstart", (event) => {
+      markFirstAction();
+      showUi();
+      const touch = event.changedTouches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
+      touchStartTime = Date.now();
+    }, { passive: true });
+    deck.addEventListener("touchend", (event) => {
+      if (!slides.length) return;
+      const touch = event.changedTouches[0];
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+      const elapsed = Date.now() - touchStartTime;
+      if (elapsed > 700 || Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
+      if (dx < 0) go(1);
+      if (dx > 0) go(-1);
+      showUi();
+    }, { passive: true });
+    indexPanel.addEventListener("click", (event) => event.stopPropagation());
+
+    window.addEventListener("keydown", (event) => {
+      markFirstAction();
+      if (event.key === "ArrowLeft") go(-1);
+      if (event.key === "ArrowRight" || event.key === " ") {
+        event.preventDefault();
+        go(1);
+      }
+      if (event.key === "Home") {
+        if (slides.length) {
+          current = 0;
+          render();
+        }
+      }
+      if (event.key === "End") {
+        if (slides.length) {
+          current = slides.length - 1;
+          render();
+        }
+      }
+      if (event.key === "Escape") {
+        closeIndex();
+      }
+      if (event.key.toLowerCase() === "p") {
+        event.preventDefault();
+        printDeck(event);
+      }
+      if (event.key.toLowerCase() === "t") {
+        event.preventDefault();
+        toggleTimeOverlay(event);
+      }
+      showUi();
+    });
+
+    document.addEventListener("fullscreenchange", () => {
+      const isFullscreen = Boolean(document.fullscreenElement);
+      fullscreen.setAttribute("aria-label", isFullscreen ? "Salir de pantalla completa" : "Pantalla completa");
+      fullscreen.setAttribute("title", isFullscreen ? "Salir" : "Pantalla completa");
+      showUi();
+    });
+
+    document.addEventListener("click", () => closeIndex());
+    indexToggle.setAttribute("aria-expanded", "false");
+    timeToggle.setAttribute("aria-pressed", "false");
+    if (Array.isArray(builtSlides) && builtSlides.length) {
+      loadBuiltSlides(builtSlides, builtBranding);
+    } else {
+      render();
+      showUi();
+    }
+  </script>
+</body>
+</html>
