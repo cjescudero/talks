@@ -1040,7 +1040,16 @@
         image.alt = `Diapositiva ${paddedSlideNumber(index)}: ${slide.title}`;
         image.decoding = "async";
         if (index === 0) image.loading = "eager";
-        image.addEventListener("error", () => showLoadError(slide.file || slide.image || slide.src));
+        image.addEventListener("error", () => {
+          const source = slide.file || slide.image || slide.src;
+          if (!image.dataset.retryAttempted && source && !String(source).startsWith("blob:")) {
+            image.dataset.retryAttempted = "true";
+            const separator = String(source).includes("?") ? "&" : "?";
+            image.src = `${source}${separator}retry=${Date.now()}`;
+            return;
+          }
+          showLoadError(source);
+        });
         stage.appendChild(image);
         return image;
       });
